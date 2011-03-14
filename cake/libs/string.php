@@ -53,66 +53,25 @@ class String extends Object {
  * @static
  */
 	function uuid() {
-		$node = env('SERVER_ADDR');
-		$pid = null;
+	    $uuid = sprintf('%04x%04x%04x%04x%04x%04x%04x%04x',
+			// 32 bits for "time_low"
+			mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ),
 
-		if (strpos($node, ':') !== false) {
-			if (substr_count($node, '::')) {
-				$node = str_replace('::', str_repeat(':0000', 8 - substr_count($node, ':')) . ':', $node);
-			}
-			$node = explode(':', $node) ;
-			$ipv6 = '' ;
+			// 16 bits for "time_mid"
+			mt_rand( 0, 0xffff ),
 
-			foreach ($node as $id) {
-				$ipv6 .= str_pad(base_convert($id, 16, 2), 16, 0, STR_PAD_LEFT);
-			}
-			$node =  base_convert($ipv6, 2, 10);
+			// 16 bits for "time_hi_and_version",
+			// four most significant bits holds version number 4
+			mt_rand( 0, 0x0fff ) | 0x4000,
 
-			if (strlen($node) < 38) {
-				$node = null;
-			} else {
-				$node = crc32($node);
-			}
-		} elseif (empty($node)) {
-			$host = env('HOSTNAME');
+			// 16 bits, 8 bits for "clk_seq_hi_res",
+			// 8 bits for "clk_seq_low",
+			// two most significant bits holds zero and one for variant DCE1.1
+			mt_rand( 0, 0x3fff ) | 0x8000,
 
-			if (empty($host)) {
-				$host = env('HOST');
-			}
-
-			if (!empty($host)) {
-				$ip = gethostbyname($host);
-
-				if ($ip === $host) {
-					$node = crc32($host);
-				} else {
-					$node = ip2long($ip);
-				}
-			}
-		} elseif ($node !== '127.0.0.1') {
-			$node = ip2long($node);
-		} else {
-			$node = null;
-		}
-
-		if (empty($node)) {
-			$node = crc32(Configure::read('Security.salt'));
-		}
-
-		if (function_exists('zend_thread_id')) {
-			$pid = zend_thread_id();
-		} else {
-			$pid = getmypid();
-		}
-
-		if (!$pid || $pid > 65535) {
-			$pid = mt_rand(0, 0xfff) | 0x4000;
-		}
-
-		list($timeMid, $timeLow) = explode(' ', microtime());
-		$uuid = sprintf("%08x-%04x-%04x-%02x%02x-%04x%08x", (int)$timeLow, (int)substr($timeMid, 2) & 0xffff,
-					mt_rand(0, 0xfff) | 0x4000, mt_rand(0, 0x3f) | 0x80, mt_rand(0, 0xff), $pid, $node);
-
+			// 48 bits for "node"
+			mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff )
+	    );
 		return $uuid;
 	}
 /**
